@@ -1,0 +1,64 @@
+plugins {
+    // Java 플러그인: Java 애플리케이션을 빌드하기 위한 기본 플러그인
+    id 'java'
+
+    // Spring Boot 플러그인: Spring Boot 애플리케이션의 빌드 및 실행을 지원
+    id 'org.springframework.boot' version '3.4.2'
+
+    // Spring 의존성 관리 플러그인: 의존성 버전을 자동 관리
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.example'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    toolchain {
+        // Java 17을 사용하도록 설정
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+configurations {
+    compileOnly {
+        // compileOnly 설정에 annotationProcessor 의존성도 포함되도록 설정
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    // 의존성을 가져올 Maven Central 저장소 사용
+    mavenCentral()
+}
+
+dependencies {
+    // Spring Boot Starter Web: 웹 애플리케이션 개발 (내장 Tomcat, Spring MVC 등 포함)
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+
+    // Spring Boot Starter WebSocket: 웹소켓 및 STOMP 메시징 지원
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+
+    // Spring Boot Starter Data JPA: JPA를 이용한 데이터 접근 및 ORM 지원
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+    // H2 데이터베이스: 인메모리 데이터베이스 (개발 및 테스트용)
+    runtimeOnly 'com.h2database:h2'
+
+    // Lombok: 보일러플레이트 코드(게터/세터 등)를 줄여줌
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    // Spring Boot DevTools: 개발 시 유용한 기능(라이브 리로드 등)을 제공 (개발 전용)
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+    // Spring Boot Starter Test: 테스트 라이브러리 (JUnit, Hamcrest, Mockito 등 포함)
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+    // JUnit Platform Launcher: JUnit 5 테스트 실행을 위한 런처
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    // JUnit Platform을 사용하도록 테스트 환경 설정
+    useJUnitPlatform()
+}
