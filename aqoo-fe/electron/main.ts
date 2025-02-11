@@ -1,10 +1,5 @@
-import { app, BrowserWindow, Tray, Menu } from 'electron';
+import { app, BrowserWindow, Menu, Tray } from 'electron';
 import path from 'path';
-
-// CommonJS 모듈 방식에서는 __dirname과 __filename이 이미 전역 변수로 제공됩니다.
-// 만약 TypeScript에서 에러가 발생한다면 아래처럼 선언해 줄 수 있습니다.
-// declare const __dirname: string;
-// declare const __filename: string;
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray;
@@ -13,32 +8,40 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1024,
     height: 768,
+    frame: true, // 네이티브 타이틀바 제거 (커스텀 타이틀바 사용)
+    alwaysOnTop: true, // 창이 다른 창 위에 항상 위치
     webPreferences: {
-      nodeIntegration: false,  
+      nodeIntegration: false,
       contextIsolation: true,
-    }
+    },
   });
 
+  // Next.js 앱 또는 원하는 URL 로드
   mainWindow.loadURL('https://i12e203.p.ssafy.io');
+  // mainWindow.loadURL('http://localhost:3000');
+
+  // 필요 시 디버그 창 열기
+  mainWindow.webContents.openDevTools();
 }
 
 app.whenReady().then(() => {
   createWindow();
 
+  // (옵션) 트레이 아이콘 설정
   tray = new Tray(path.join(__dirname, 'icon.png'));
   const trayMenu = Menu.buildFromTemplate([
     {
       label: '앱 열기',
       click: () => {
-        if (mainWindow) mainWindow.show();
-      }
+        mainWindow?.show();
+      },
     },
     {
       label: '종료',
       click: () => {
         app.quit();
-      }
-    }
+      },
+    },
   ]);
   tray.setContextMenu(trayMenu);
 

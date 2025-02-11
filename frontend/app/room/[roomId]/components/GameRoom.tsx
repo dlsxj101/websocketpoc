@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState, useRef, FormEvent } from 'react';
 import { connectStompClient, getStompClient } from '@/lib/stompClient';
+import { useEffect, useRef, useState } from 'react';
 import Game from './Game';
 
 interface Player {
@@ -20,7 +20,10 @@ interface GameRoomProps {
   initialUserName: string;
 }
 
-export default function GameRoom({ initialRoomId, initialUserName }: GameRoomProps) {
+export default function GameRoom({
+  initialRoomId,
+  initialUserName,
+}: GameRoomProps) {
   // isCreator: 초기 roomId가 "new"이면 생성자, 아니면 참가자
   const isCreator = initialRoomId === 'new';
 
@@ -96,8 +99,10 @@ export default function GameRoom({ initialRoomId, initialUserName }: GameRoomPro
   // 방 생성/입장이 처리되기 전에는 로딩 상태 표시
   if (!roomId) {
     return (
-      <div className="max-w-md p-4 mx-auto mt-8 bg-white rounded shadow">
-        <h2 className="mb-4 text-2xl font-bold">{isCreator ? 'Creating Room...' : 'Waiting for Room...'}</h2>
+      <div className='max-w-md p-4 mx-auto mt-8 bg-white rounded shadow'>
+        <h2 className='mb-4 text-2xl font-bold'>
+          {isCreator ? 'Creating Room...' : 'Waiting for Room...'}
+        </h2>
         <p>Please wait.</p>
       </div>
     );
@@ -105,12 +110,12 @@ export default function GameRoom({ initialRoomId, initialUserName }: GameRoomPro
 
   // 최종 게임룸 UI
   return (
-    <div className="max-w-2xl p-4 mx-auto mt-8 bg-white rounded shadow">
-      <h2 className="mb-4 text-2xl font-bold">Room: {roomId}</h2>
-      <p className="mb-2">Logged in as: {userName}</p>
+    <div className='max-w-2xl p-4 mx-auto mt-8 bg-white rounded shadow'>
+      <h2 className='mb-4 text-2xl font-bold'>Room: {roomId}</h2>
+      <p className='mb-2'>Logged in as: {userName}</p>
       {roomData ? (
-        <div className="mb-4">
-          <h3 className="font-semibold">Players:</h3>
+        <div className='mb-4'>
+          <h3 className='font-semibold'>Players:</h3>
           {roomData.players.length > 0 ? (
             <ul>
               {roomData.players.map((player, index) => (
@@ -124,12 +129,12 @@ export default function GameRoom({ initialRoomId, initialUserName }: GameRoomPro
           )}
         </div>
       ) : (
-        <p className="mb-4">Waiting for room data...</p>
+        <p className='mb-4'>Waiting for room data...</p>
       )}
       {!gameStarted ? (
         <button
           onClick={handleStartGame}
-          className="px-4 py-2 text-white transition-colors bg-blue-500 rounded hover:bg-blue-600"
+          className='hover:bg-blue-600 px-4 py-2 text-white transition-colors bg-blue-500 rounded'
         >
           Start Game
         </button>

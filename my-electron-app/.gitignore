@@ -1,0 +1,34 @@
+# Node.js 관련
+node_modules/
+
+# 로그 파일들
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# 빌드 출력 폴더 (예: Electron 빌드 결과물 또는 기타 컴파일된 결과)
+dist/
+build/
+release/
+out/
+
+# Electron ASAR 패키지 (사용 시)
+*.asar
+
+# 환경변수 파일 (비밀번호 등 민감한 정보가 포함될 수 있음)
+.env
+.env.local
+.env.*.local
+
+# OS에서 생성되는 파일들
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# 에디터 및 IDE 설정 폴더
+.vscode/
+.idea/
+
+# 기타 캐시 파일 및 임시 파일들
+.cache/
+*.tmp

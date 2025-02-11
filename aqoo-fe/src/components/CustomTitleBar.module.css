@@ -1,0 +1,30 @@
+.titleBar {
+  position: fixed; /* 항상 고정된 위치에 표시 */
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 40px;
+  background-color: #3b82f6; /* 푸르스름한 색상 */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  z-index: 9999; /* 다른 콘텐츠 위에 표시 */
+  -webkit-app-region: drag; /* 드래그 영역 지정 (창 이동 가능) */
+}
+
+.controls button {
+  -webkit-app-region: no-drag; /* 버튼 클릭 시 드래그 방지 */
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  margin-left: 5px;
+}
+
+.title {
+  color: white;
+  font-size: 16px;
+  font-weight: bold;
+}
