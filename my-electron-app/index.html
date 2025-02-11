@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <title>My Electron App</title>
     <style>
-      /* html과 body에 전체 높이 지정 */
+      /* html, body 전체 높이 및 기본 스타일 */
       html,
       body {
         height: 100%;
@@ -29,15 +29,13 @@
         z-index: 1000; /* 다른 요소 위에 표시 */
         -webkit-app-region: drag;
       }
-      /* 컨트롤 버튼들을 담는 영역 */
       #controls {
         display: flex;
         align-items: center;
         margin-right: 15px;
       }
-      /* 기본 버튼 스타일 */
       #controls button {
-        -webkit-app-region: no-drag; /* 버튼 클릭 시 드래그 방지 */
+        -webkit-app-region: no-drag;
         background: transparent;
         border: none;
         color: white;
@@ -45,13 +43,13 @@
         cursor: pointer;
         margin-left: 5px;
       }
-      /* iframe 스타일: 타이틀바 아래 전체 공간 차지 */
+      /* <webview> 스타일: 타이틀바 아래 전체 공간 차지 */
       #content {
         position: absolute;
-        top: 40px; /* 타이틀바 높이만큼 아래에 위치 */
+        top: 40px; /* 타이틀바 높이만큼 아래 */
         left: 0;
         width: 100%;
-        height: calc(100% - 40px); /* 전체 높이에서 타이틀바 높이(40px)를 뺌 */
+        height: calc(100% - 40px);
         border: none;
       }
     </style>
@@ -66,8 +64,8 @@
         <button onclick="closeWindow()">×</button>
       </div>
     </div>
-    <!-- 외부 URL을 불러올 iframe -->
-    <iframe id="content" src="https://i12e203.p.ssafy.io"></iframe>
+    <!-- 외부 URL을 불러올 <webview> 태그 -->
+    <webview id="content" src="https://i12e203.p.ssafy.io"></webview>
 
     <!-- IPC 호출 함수 -->
     <script>
