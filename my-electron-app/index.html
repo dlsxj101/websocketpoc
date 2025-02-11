@@ -29,8 +29,15 @@
         z-index: 1000; /* 다른 요소 위에 표시 */
         -webkit-app-region: drag;
       }
+      /* 컨트롤 버튼들을 담는 영역 */
+      #controls {
+        display: flex;
+        align-items: center;
+        margin-right: 15px;
+      }
+      /* 기본 버튼 스타일 */
       #controls button {
-        -webkit-app-region: no-drag;
+        -webkit-app-region: no-drag; /* 버튼 클릭 시 드래그 방지 */
         background: transparent;
         border: none;
         color: white;
@@ -52,7 +59,7 @@
   <body>
     <!-- 커스텀 타이틀바 -->
     <div id="titlebar">
-      <div id="title">My Electron App</div>
+      <div id="title">AQoO</div>
       <div id="controls">
         <button onclick="minimize()">─</button>
         <button onclick="maximize()">□</button>

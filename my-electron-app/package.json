@@ -4,13 +4,25 @@
   "description": "",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "build": "electron-builder"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
-    "electron": "^34.1.1"
+    "electron": "^34.1.1",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "AQoO",
+    "productName": "AQoO",
+    "win": {
+      "target": "nsis"
+    },
+    "directories": {
+      "output": "release"
+    }
   }
 }

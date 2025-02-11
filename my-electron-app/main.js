@@ -21,7 +21,7 @@ function createWindow() {
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
 
   // 개발 중 디버깅 창 열기 (개발 시에만 사용)
-  mainWindow.webContents.openDevTools();
+  //   mainWindow.webContents.openDevTools();
 
   // 창이 닫힐 때 처리
   mainWindow.on('closed', () => {
