@@ -20,6 +20,7 @@ function createMainWindow() {
 
   // 로컬 래퍼 페이지인 index.html 로드
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
+  // mainWindow.loadURL('https://i12e203.p.ssafy.io');
 
   // 개발 중 디버깅 창 열기 (필요 시)
   // mainWindow.webContents.openDevTools();
@@ -78,4 +79,29 @@ ipcMain.on('maximize-window', () => {
 
 ipcMain.on('close-window', () => {
   if (mainWindow) mainWindow.close();
+});
+
+// IPC 이벤트 처리: 오버레이 창 띄우기 기능
+ipcMain.on('open-overlay', () => {
+  // 오버레이 창 생성: 투명, 프레임 없음, 항상 최상단
+  const overlayWindow = new BrowserWindow({
+    width: 400,
+    height: 300,
+    frame: false,
+    transparent: true,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+    },
+  });
+
+  // 오버레이에 표시할 내용을 담은 overlay.html 로드
+  overlayWindow.loadFile(path.join(__dirname, 'overlay.html'));
+
+  // 오버레이 창은 사용자가 직접 닫을 수 있도록 하거나, 일정 시간 후 자동 닫기 등 추가 로직을 구현할 수 있음
+  overlayWindow.on('closed', () => {
+    // 오버레이 창이 닫혔을 때 추가 작업이 필요하면 이곳에 작성
+  });
 });

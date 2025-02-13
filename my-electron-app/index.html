@@ -29,11 +29,23 @@
         z-index: 1000; /* 다른 요소 위에 표시 */
         -webkit-app-region: drag;
       }
+      /* 타이틀 영역: 아이콘과 텍스트를 수평 배치 */
+      #title {
+        display: flex;
+        align-items: center;
+      }
+      /* 아이콘 이미지 스타일 */
+      #title img {
+        height: 30px;
+        margin-right: 10px;
+      }
+      /* 컨트롤 버튼 영역 */
       #controls {
         display: flex;
         align-items: center;
         margin-right: 15px;
       }
+      /* 최소화, 최대화, 닫기 버튼 공통 스타일 */
       #controls button {
         -webkit-app-region: no-drag;
         background: transparent;
@@ -42,6 +54,22 @@
         font-size: 16px;
         cursor: pointer;
         margin-left: 5px;
+        padding: 4px 8px;
+        border-radius: 4px;
+        transition: background-color 0.2s ease, transform 0.1s ease;
+      }
+      /* 버튼 호버 효과: 기본적으로 살짝 확대 및 배경색 변경 */
+      #controls button:hover {
+        background-color: rgba(255, 255, 255, 0.3);
+        transform: scale(1.05);
+      }
+      /* 버튼 클릭 시 약간 축소 효과 */
+      #controls button:active {
+        transform: scale(0.95);
+      }
+      /* 닫기 버튼은 별도 클래스로 붉은 호버 효과 적용 */
+      #controls .btn-close:hover {
+        background-color: rgba(255, 0, 0, 0.5);
       }
       /* <webview> 스타일: 타이틀바 아래 전체 공간 차지 */
       #content {
@@ -57,15 +85,23 @@
   <body>
     <!-- 커스텀 타이틀바 -->
     <div id="titlebar">
-      <div id="title">AQoO</div>
+      <div id="title">
+        <!-- public 폴더에 위치한 아이콘 파일 -->
+        <img src="public/icon.ico" alt="App Icon" />
+        AQoO
+      </div>
       <div id="controls">
-        <button onclick="minimize()">─</button>
+        <button onclick="minimize()">-</button>
         <button onclick="maximize()">□</button>
-        <button onclick="closeWindow()">×</button>
+        <button class="btn-close" onclick="closeWindow()">×</button>
       </div>
     </div>
     <!-- 외부 URL을 불러올 <webview> 태그 -->
-    <webview id="content" src="https://i12e203.p.ssafy.io"></webview>
+    <webview
+      id="content"
+      src="https://i12e203.p.ssafy.io"
+      preload="./webview-preload.js"
+    ></webview>
 
     <!-- IPC 호출 함수 -->
     <script>
