@@ -8,8 +8,8 @@ function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 1024,
     height: 768,
-    frame: false,
-    alwaysOnTop: true,
+    frame: true,
+    alwaysOnTop: true, // 초기 설정 (나중에 relativeLevel로 조정)
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
@@ -18,24 +18,38 @@ function createMainWindow() {
     },
   });
 
-  // index.html 로드 (여기서 웹뷰가 메인 페이지 역할)
-  mainWindow.loadFile(path.join(__dirname, 'index.html'));
-  mainWindow.loadURL("https://i12e203.p.ssafy.io");
-  mainWindow.webContents.openDevTools();
+  // URL 로드
+  mainWindow.loadURL('https://i12e203.p.ssafy.io');
+  // mainWindow.loadFile(path.join(__dirname, 'index.html'));
+
+  // 창이 준비되면 메인 창은 relativeLevel 0으로 설정
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.setAlwaysOnTop(true, 'screen-saver', 0);
+  });
 
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
 }
 
-app.whenReady().then(() => {
-  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
-    console.log('Permission requested:', permission, 'from URL:', webContents.getURL());
-    callback(permission === 'media');
-  });
+app
+  .whenReady()
+  .then(() => {
+    session.defaultSession.setPermissionRequestHandler(
+      (webContents, permission, callback) => {
+        console.log(
+          'Permission requested:',
+          permission,
+          'from URL:',
+          webContents.getURL()
+        );
+        callback(permission === 'media');
+      }
+    );
 
-  createMainWindow();
-}).catch((err) => console.error(err));
+    createMainWindow();
+  })
+  .catch((err) => console.error(err));
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
@@ -59,32 +73,66 @@ ipcMain.on('close-window', () => {
   if (mainWindow) mainWindow.close();
 });
 
-// 오버레이 창 띄우기 및 fishPath 전달
-ipcMain.on('open-overlay', (event, fishPath) => {
-  console.log('[main.js] Received open-overlay, fishPath:', fishPath);
+// 오버레이 창 토글 및 fishPath 전달
+let overlayWindow = null;
 
-  const overlayWindow = new BrowserWindow({
-    width: 400,
-    height: 300,
-    frame: false,
-    transparent: true,
-    alwaysOnTop: true,
-    skipTaskbar: true,
-    webPreferences: {
-      preload: path.join(__dirname, 'overlay-preload.js'),
-      nodeIntegration: false,
-      contextIsolation: true,
-    },
+ipcMain.on('toggle-overlay', (event, fishPath) => {
+  console.log('[main.js] Received toggle-overlay, fishPath:', fishPath);
+  if (overlayWindow) {
+    // 이미 열려 있다면 닫습니다.
+    overlayWindow.close();
+    overlayWindow = null;
+  } else {
+    // 오버레이 창 생성 (전체 화면)
+    overlayWindow = new BrowserWindow({
+      fullscreen: true,
+      frame: false,
+      transparent: true,
+      alwaysOnTop: true, // 초기 설정 (나중에 relativeLevel로 조정)
+      skipTaskbar: true,
+      focusable: false, // 포커스를 받지 않도록
+      webPreferences: {
+        preload: path.join(__dirname, 'overlay-preload.js'),
+        nodeIntegration: false,
+        contextIsolation: true,
+      },
+    });
+
+    overlayWindow.loadFile(path.join(__dirname, 'overlay.html'));
+
+    overlayWindow.webContents.on('did-finish-load', () => {
+      // 오버레이 창은 relativeLevel 1로 설정하여 메인 창보다 위에 표시
+      overlayWindow.setAlwaysOnTop(true, 'screen-saver', 1);
+      console.log('[main.js] Sending fish-data to overlay:', fishPath);
+      overlayWindow.webContents.send('fish-data', fishPath);
+    });
+
+    overlayWindow.setIgnoreMouseEvents(true, { forward: true });
+
+    overlayWindow.on('closed', () => {
+      console.log('[main.js] Overlay window closed.');
+      overlayWindow = null;
+    });
+  }
+});
+
+// 메인 창이 복원되거나 포커스를 받을 때마다 오버레이 창의 relativeLevel을 유지
+if (mainWindow) {
+  mainWindow.on('restore', () => {
+    if (overlayWindow && !overlayWindow.isDestroyed()) {
+      overlayWindow.setAlwaysOnTop(true, 'screen-saver', 1);
+    }
   });
-
-  overlayWindow.loadFile(path.join(__dirname, 'overlay.html'));
-
-  overlayWindow.webContents.on('did-finish-load', () => {
-    console.log('[main.js] Sending fish-data to overlay:', fishPath);
-    overlayWindow.webContents.send('fish-data', fishPath);
+  mainWindow.on('focus', () => {
+    if (overlayWindow && !overlayWindow.isDestroyed()) {
+      overlayWindow.setAlwaysOnTop(true, 'screen-saver', 1);
+    }
   });
+}
 
-  overlayWindow.on('closed', () => {
-    console.log('[main.js] Overlay window closed.');
-  });
+// 모든 브라우저 창 생성 시에도 오버레이 창 우선순위 재설정
+app.on('browser-window-created', (event, newWindow) => {
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    overlayWindow.setAlwaysOnTop(true, 'screen-saver', 1);
+  }
 });

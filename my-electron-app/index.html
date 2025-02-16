@@ -100,11 +100,27 @@
     <webview
       id="content"
       src="https://i12e203.p.ssafy.io"
-      preload="./webview-preload.js"
+      preload="file:///D:/workspace/websocketpoc/my-electron-app/webview-preload.js"
     ></webview>
 
     <!-- IPC 호출 함수 -->
     <script>
+      const webview = document.getElementById('content');
+
+      // 1) 웹뷰에서 ipcRenderer.sendToHost('fishPath', fishPath)를 보내면,
+      // 2) 아래 ipc-message 이벤트가 발생함
+      webview.addEventListener('ipc-message', (event) => {
+        if (event.channel === 'fishPath') {
+          const fishPath = event.args[0];
+          console.log(
+            '[parent index.html] Received fishPath from webview:',
+            fishPath
+          );
+
+          // 여기서 오버레이를 띄우는 IPC 호출
+          window.electronAPI.openOverlay(fishPath);
+        }
+      });
       function minimize() {
         if (window.electronAPI) window.electronAPI.minimize();
       }
