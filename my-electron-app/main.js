@@ -3,13 +3,15 @@ const { app, BrowserWindow, ipcMain, session } = require('electron');
 const path = require('path');
 
 let mainWindow;
+let overlayWindow = null;
 
 function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 1024,
     height: 768,
     frame: true,
-    alwaysOnTop: true, // 초기 설정 (나중에 relativeLevel로 조정)
+    // 기본적으로는 항상 위로 두지만, 오버레이가 열리면 해제할 예정
+    alwaysOnTop: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
@@ -18,17 +20,28 @@ function createMainWindow() {
     },
   });
 
-  // URL 로드
   mainWindow.loadURL('https://i12e203.p.ssafy.io');
   // mainWindow.loadFile(path.join(__dirname, 'index.html'));
 
-  // 창이 준비되면 메인 창은 relativeLevel 0으로 설정
-  mainWindow.once('ready-to-show', () => {
-    mainWindow.setAlwaysOnTop(true, 'screen-saver', 0);
-  });
-
   mainWindow.on('closed', () => {
     mainWindow = null;
+  });
+
+  // 메인 창 이벤트에서 오버레이가 없을 때만 항상 위로 설정
+  mainWindow.on('show', () => {
+    if (!overlayWindow) {
+      mainWindow.setAlwaysOnTop(true);
+    }
+  });
+  mainWindow.on('restore', () => {
+    if (!overlayWindow) {
+      mainWindow.setAlwaysOnTop(true);
+    }
+  });
+  mainWindow.on('focus', () => {
+    if (!overlayWindow) {
+      mainWindow.setAlwaysOnTop(true);
+    }
   });
 }
 
@@ -46,7 +59,6 @@ app
         callback(permission === 'media');
       }
     );
-
     createMainWindow();
   })
   .catch((err) => console.error(err));
@@ -74,23 +86,23 @@ ipcMain.on('close-window', () => {
 });
 
 // 오버레이 창 토글 및 fishPath 전달
-let overlayWindow = null;
-
 ipcMain.on('toggle-overlay', (event, fishPath) => {
-  console.log('[main.js] Received toggle-overlay, fishPath:', fishPath);
   if (overlayWindow) {
-    // 이미 열려 있다면 닫습니다.
+    // 오버레이 닫을 때 메인 창을 원래 alwaysOnTop 상태로 복원
     overlayWindow.close();
     overlayWindow = null;
+    if (mainWindow) mainWindow.setAlwaysOnTop(true);
   } else {
-    // 오버레이 창 생성 (전체 화면)
+    // 오버레이 창 열릴 때 메인 창의 alwaysOnTop 해제(활성화 시 일반 창처럼 동작)
+    if (mainWindow) mainWindow.setAlwaysOnTop(false);
+
     overlayWindow = new BrowserWindow({
       fullscreen: true,
       frame: false,
       transparent: true,
-      alwaysOnTop: true, // 초기 설정 (나중에 relativeLevel로 조정)
+      alwaysOnTop: true, // 오버레이는 계속 위에 표시
       skipTaskbar: true,
-      focusable: false, // 포커스를 받지 않도록
+      focusable: false, // 포커스 불가
       webPreferences: {
         preload: path.join(__dirname, 'overlay-preload.js'),
         nodeIntegration: false,
@@ -101,38 +113,26 @@ ipcMain.on('toggle-overlay', (event, fishPath) => {
     overlayWindow.loadFile(path.join(__dirname, 'overlay.html'));
 
     overlayWindow.webContents.on('did-finish-load', () => {
-      // 오버레이 창은 relativeLevel 1로 설정하여 메인 창보다 위에 표시
-      overlayWindow.setAlwaysOnTop(true, 'screen-saver', 1);
-      console.log('[main.js] Sending fish-data to overlay:', fishPath);
+      // 오버레이 창을 'screen-saver' 우선순위로 고정 (필요에 따라 다른 레벨 사용 가능)
+      overlayWindow.setAlwaysOnTop(true, 'screen-saver', 0);
       overlayWindow.webContents.send('fish-data', fishPath);
+      // 오버레이 창이 열렸어도 메인 창이 활성화되도록 포커스 강제 지정
+      if (mainWindow) mainWindow.focus();
     });
 
     overlayWindow.setIgnoreMouseEvents(true, { forward: true });
 
     overlayWindow.on('closed', () => {
-      console.log('[main.js] Overlay window closed.');
       overlayWindow = null;
+      // 오버레이 창 닫히면 메인 창 alwaysOnTop 복원
+      if (mainWindow) mainWindow.setAlwaysOnTop(true);
     });
   }
 });
 
-// 메인 창이 복원되거나 포커스를 받을 때마다 오버레이 창의 relativeLevel을 유지
-if (mainWindow) {
-  mainWindow.on('restore', () => {
-    if (overlayWindow && !overlayWindow.isDestroyed()) {
-      overlayWindow.setAlwaysOnTop(true, 'screen-saver', 1);
-    }
-  });
-  mainWindow.on('focus', () => {
-    if (overlayWindow && !overlayWindow.isDestroyed()) {
-      overlayWindow.setAlwaysOnTop(true, 'screen-saver', 1);
-    }
-  });
-}
-
-// 모든 브라우저 창 생성 시에도 오버레이 창 우선순위 재설정
+// 새 브라우저 창 생성 시에도 오버레이 우선순위 재적용 (필요에 따라)
 app.on('browser-window-created', (event, newWindow) => {
   if (overlayWindow && !overlayWindow.isDestroyed()) {
-    overlayWindow.setAlwaysOnTop(true, 'screen-saver', 1);
+    overlayWindow.setAlwaysOnTop(true, 'screen-saver', 0);
   }
 });
