@@ -274,7 +274,7 @@ app.on('browser-window-created', (event, newWindow) => {
 ipcMain.handle('show-alert', async (event, message) => {
   await dialog.showMessageBox(mainWindow, {
     type: 'warning',
-    title: '알림',
+    title: 'AQoO',
     message: message,
     buttons: ['확인'],
     defaultId: 0,
