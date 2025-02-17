@@ -8,4 +8,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
     console.log('[preload] toggleOverlay called with fishPath:', fishPath);
     ipcRenderer.send('toggle-overlay', fishPath);
   },
+  showAlert: (message) => ipcRenderer.invoke('show-alert', message)
 });

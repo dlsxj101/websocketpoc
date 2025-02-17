@@ -2,10 +2,61 @@
 const { app, BrowserWindow, ipcMain, session, Tray, Menu, dialog } = require('electron');
 const path = require('path');
 
+// 단일 인스턴스 락 설정
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+}
+
 let mainWindow;
 let overlayWindow = null;
 let tray = null;
 let isQuiting = false; // 실제 종료할 때만 true로 전환
+
+// fade-in 효과 함수 (투명도 조절)
+function fadeInWindow(win, duration = 300) {
+  const steps = 20;
+  const intervalTime = duration / steps;
+  let opacity = 0;
+  win.setOpacity(0);
+  win.show();
+
+  const fadeInterval = setInterval(() => {
+    opacity += 1 / steps;
+    if (opacity >= 1) {
+      win.setOpacity(1);
+      clearInterval(fadeInterval);
+    } else {
+      win.setOpacity(opacity);
+    }
+  }, intervalTime);
+}
+
+// fade-out 효과 함수 (투명도 조절)
+function fadeOutWindow(win, duration = 300, callback) {
+  const steps = 20;
+  const intervalTime = duration / steps;
+  let opacity = win.getOpacity(); // 보통 1일 것임
+  const fadeInterval = setInterval(() => {
+    opacity -= 1 / steps;
+    if (opacity <= 0) {
+      win.setOpacity(0);
+      clearInterval(fadeInterval);
+      if (callback) callback();
+    } else {
+      win.setOpacity(opacity);
+    }
+  }, intervalTime);
+}
+
+// 두 번째 인스턴스 실행 시 기존 창을 fade-in 효과와 함께 포커스하도록 처리
+app.on('second-instance', (event, commandLine, workingDirectory) => {
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    fadeInWindow(mainWindow);
+    mainWindow.focus();
+  }
+});
 
 function createMainWindow() {
   mainWindow = new BrowserWindow({
@@ -29,11 +80,15 @@ function createMainWindow() {
     mainWindow = null;
   });
 
-  // 창 닫기(X 버튼) 시 실제 종료하지 않고 트레이로 숨김
+  // 창 닫기(X 버튼) 시 fade-out 효과 후 트레이로 숨김
   mainWindow.on('close', (event) => {
     if (!isQuiting) {
       event.preventDefault();
-      mainWindow.hide();
+      fadeOutWindow(mainWindow, 300, () => {
+        mainWindow.hide();
+        // fade-out 후, 다시 사용할 수 있도록 투명도를 복원
+        mainWindow.setOpacity(1);
+      });
     }
   });
 
@@ -87,13 +142,14 @@ function createTray() {
     },
   ]);
 
-  tray.setToolTip('My Electron App');
+  tray.setToolTip('AQoO');
   tray.setContextMenu(contextMenu);
 
-  // 더블클릭 시 창을 다시 보이게 할 수도 있음
+  // 더블클릭 시 창을 fade-in 효과와 함께 보이게 함
   tray.on('double-click', () => {
     if (mainWindow) {
-      mainWindow.show();
+      fadeInWindow(mainWindow);
+      mainWindow.focus();
     }
   });
 }
@@ -190,4 +246,14 @@ app.on('browser-window-created', (event, newWindow) => {
   if (overlayWindow && !overlayWindow.isDestroyed()) {
     overlayWindow.setAlwaysOnTop(true, 'screen-saver', 0);
   }
+});
+
+ipcMain.handle('show-alert', async (event, message) => {
+  await dialog.showMessageBox(mainWindow, {
+    type: 'warning',
+    title: '알림',
+    message: message,
+    buttons: ['확인'],
+    defaultId: 0
+  });
 });
