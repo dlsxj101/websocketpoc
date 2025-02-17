@@ -1,9 +1,11 @@
 // main.js
-const { app, BrowserWindow, ipcMain, session } = require('electron');
+const { app, BrowserWindow, ipcMain, session, Tray, Menu, dialog } = require('electron');
 const path = require('path');
 
 let mainWindow;
 let overlayWindow = null;
+let tray = null;
+let isQuiting = false; // 실제 종료할 때만 true로 전환
 
 function createMainWindow() {
   mainWindow = new BrowserWindow({
@@ -11,7 +13,7 @@ function createMainWindow() {
     height: 768,
     frame: true,
     // 기본적으로는 항상 위로 두지만, 오버레이가 열리면 해제할 예정
-    alwaysOnTop: true,
+    alwaysOnTop: true, 
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
@@ -25,6 +27,14 @@ function createMainWindow() {
 
   mainWindow.on('closed', () => {
     mainWindow = null;
+  });
+
+  // 창 닫기(X 버튼) 시 실제 종료하지 않고 트레이로 숨김
+  mainWindow.on('close', (event) => {
+    if (!isQuiting) {
+      event.preventDefault();
+      mainWindow.hide();
+    }
   });
 
   // 메인 창 이벤트에서 오버레이가 없을 때만 항상 위로 설정
@@ -45,6 +55,49 @@ function createMainWindow() {
   });
 }
 
+function createTray() {
+  // trayIcon.png 파일은 프로젝트 내 아이콘 파일 경로로 대체하세요.
+  tray = new Tray(path.join(__dirname, './public/trayIcon.png'));
+
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: 'AQoO 종료',
+      click: () => {
+        // 확인 메시지 박스 표시
+        dialog
+          .showMessageBox({
+            type: 'question',
+            buttons: ['네', '아니오'],
+            defaultId: 1,
+            cancelId: 1,
+            message: 'AQoO를 종료하시겠습니까?',
+          })
+          .then((result) => {
+            if (result.response === 0) { // '네' 버튼 선택
+              isQuiting = true;
+              // 오버레이가 열려있으면 함께 종료
+              if (overlayWindow) {
+                overlayWindow.close();
+              }
+              tray.destroy();
+              app.quit();
+            }
+          });
+      },
+    },
+  ]);
+
+  tray.setToolTip('My Electron App');
+  tray.setContextMenu(contextMenu);
+
+  // 더블클릭 시 창을 다시 보이게 할 수도 있음
+  tray.on('double-click', () => {
+    if (mainWindow) {
+      mainWindow.show();
+    }
+  });
+}
+
 app
   .whenReady()
   .then(() => {
@@ -60,11 +113,13 @@ app
       }
     );
     createMainWindow();
+    createTray();
   })
   .catch((err) => console.error(err));
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
+  // 모든 창을 닫아도 트레이가 있으면 앱은 종료되지 않음
+  if (process.platform !== 'darwin' && !tray) app.quit();
 });
 
 app.on('activate', () => {
