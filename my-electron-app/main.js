@@ -1,5 +1,13 @@
 // main.js
-const { app, BrowserWindow, ipcMain, session, Tray, Menu, dialog } = require('electron');
+const {
+  app,
+  BrowserWindow,
+  ipcMain,
+  session,
+  Tray,
+  Menu,
+  dialog,
+} = require('electron');
 const path = require('path');
 
 // 단일 인스턴스 락 설정
@@ -12,6 +20,12 @@ let mainWindow;
 let overlayWindow = null;
 let tray = null;
 let isQuiting = false; // 실제 종료할 때만 true로 전환
+
+// preload 파일 경로 확인용 로그
+const mainPreloadPath = path.join(__dirname, 'preload.js');
+const overlayPreloadPath = path.join(__dirname, 'overlay-preload.js');
+console.log('[main.js] Main preload path:', mainPreloadPath);
+console.log('[main.js] Overlay preload path:', overlayPreloadPath);
 
 // fade-in 효과 함수 (투명도 조절)
 function fadeInWindow(win, duration = 300) {
@@ -64,12 +78,13 @@ function createMainWindow() {
     height: 768,
     frame: true,
     // 기본적으로는 항상 위로 두지만, 오버레이가 열리면 해제할 예정
-    alwaysOnTop: true, 
+    alwaysOnTop: true,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: mainPreloadPath,
       nodeIntegration: false,
       contextIsolation: true,
       webviewTag: true,
+      devTools: true, // DevTools 활성화
     },
   });
 
@@ -128,7 +143,8 @@ function createTray() {
             message: 'AQoO를 종료하시겠습니까?',
           })
           .then((result) => {
-            if (result.response === 0) { // '네' 버튼 선택
+            if (result.response === 0) {
+              // '네' 버튼 선택
               isQuiting = true;
               // 오버레이가 열려있으면 함께 종료
               if (overlayWindow) {
@@ -198,13 +214,21 @@ ipcMain.on('close-window', () => {
 
 // 오버레이 창 토글 및 fishPath 전달
 ipcMain.on('toggle-overlay', (event, fishPath) => {
+  console.log('[toggle-overlay] Called with fishPath:', fishPath);
+
   if (overlayWindow) {
-    // 오버레이 닫을 때 메인 창을 원래 alwaysOnTop 상태로 복원
+    console.log('[toggle-overlay] Overlay window exists. Closing overlay.');
     overlayWindow.close();
     overlayWindow = null;
     if (mainWindow) mainWindow.setAlwaysOnTop(true);
   } else {
-    // 오버레이 창 열릴 때 메인 창의 alwaysOnTop 해제(활성화 시 일반 창처럼 동작)
+    if (!fishPath) {
+      console.warn(
+        '[toggle-overlay] No fishPath provided. Aborting overlay creation.'
+      );
+      return;
+    }
+
     if (mainWindow) mainWindow.setAlwaysOnTop(false);
 
     overlayWindow = new BrowserWindow({
@@ -215,9 +239,10 @@ ipcMain.on('toggle-overlay', (event, fishPath) => {
       skipTaskbar: true,
       focusable: false, // 포커스 불가
       webPreferences: {
-        preload: path.join(__dirname, 'overlay-preload.js'),
+        preload: overlayPreloadPath,
         nodeIntegration: false,
         contextIsolation: true,
+        devTools: true, // DevTools 활성화
       },
     });
 
@@ -227,7 +252,6 @@ ipcMain.on('toggle-overlay', (event, fishPath) => {
       // 오버레이 창을 'screen-saver' 우선순위로 고정 (필요에 따라 다른 레벨 사용 가능)
       overlayWindow.setAlwaysOnTop(true, 'screen-saver', 0);
       overlayWindow.webContents.send('fish-data', fishPath);
-      // 오버레이 창이 열렸어도 메인 창이 활성화되도록 포커스 강제 지정
       if (mainWindow) mainWindow.focus();
     });
 
@@ -235,7 +259,6 @@ ipcMain.on('toggle-overlay', (event, fishPath) => {
 
     overlayWindow.on('closed', () => {
       overlayWindow = null;
-      // 오버레이 창 닫히면 메인 창 alwaysOnTop 복원
       if (mainWindow) mainWindow.setAlwaysOnTop(true);
     });
   }
@@ -254,6 +277,6 @@ ipcMain.handle('show-alert', async (event, message) => {
     title: '알림',
     message: message,
     buttons: ['확인'],
-    defaultId: 0
+    defaultId: 0,
   });
 });

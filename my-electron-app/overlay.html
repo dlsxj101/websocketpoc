@@ -17,9 +17,7 @@
         overflow: hidden;
       }
       /* 물고기 이미지 스타일 */
-      #fishImg {
-        width: 75px;
-        height: 75px;
+      .fish {
         object-fit: contain;
         position: absolute;
       }
@@ -28,36 +26,84 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.5/gsap.min.js"></script>
   </head>
   <body>
-    <img id="fishImg" src="" alt="fish image" />
     <script>
-      // overlay-preload.js를 통해 expose된 overlayAPI를 사용해 fishPath를 받음
-      window.overlayAPI.onFishData((fishPath) => {
-        console.log('[overlay.html] onFishData - fishPath:', fishPath);
-        const fishImg = document.getElementById('fishImg');
-        fishImg.src = fishPath;
-        // 이미지가 로드되면 애니메이션 시작
+      window.addEventListener('DOMContentLoaded', () => {
+        // overlay-preload.js를 통해 expose된 overlayAPI를 사용해 fishData를 받음
+        window.overlayAPI.onFishData((fishDataStr) => {
+          console.log('[overlay.html] onFishData - fishDataStr:', fishDataStr);
+          if (!fishDataStr) {
+            console.warn('[overlay.html] 전달받은 fishDataStr이 없습니다.');
+            return;
+          }
+          // 데이터 포맷: "https://.../블루탱.png:S:1,https://.../클라운피쉬.png:S:1,https://.../임페리얼엔젤피쉬.png:S:1,..."
+          const fishEntries = fishDataStr.split(',');
+          fishEntries.forEach((entry) => {
+            const parts = entry.split(':');
+            console.log('parts.length:', parts.length);
+            if (parts.length !== 4) {
+              console.warn('[overlay.html] 잘못된 데이터 포맷:', entry);
+              return;
+            }
+            const [head, imgUrl, size, countStr] = parts;
+            const count = parseInt(countStr, 10);
+            for (let i = 0; i < count; i++) {
+              createFish(head + ':' + imgUrl, size);
+            }
+          });
+        });
+      });
+
+      // 물고기 크기 설정 함수
+      function getFishSize(size) {
+        switch (size) {
+          case 'XS':
+            return { width: 50, height: 50 };
+          case 'S':
+            return { width: 75, height: 75 };
+          case 'M':
+            return { width: 110, height: 110 };
+          case 'L':
+            return { width: 175, height: 175 };
+          case 'XL':
+            return { width: 200, height: 200 };
+          default:
+            return { width: 110, height: 110 }; // 기본값 (M)
+        }
+      }
+
+      // 물고기 이미지 생성 및 DOM에 추가
+      function createFish(imgUrl, size) {
+        const fishImg = document.createElement('img');
+        fishImg.className = 'fish';
+        fishImg.src = imgUrl;
+        fishImg.alt = 'fish image';
+
+        // 크기 적용
+        const fishSize = getFishSize(size);
+        fishImg.style.width = fishSize.width + 'px';
+        fishImg.style.height = fishSize.height + 'px';
+
+        document.body.appendChild(fishImg);
         fishImg.onload = () => {
           animateFish(fishImg);
         };
-      });
+      }
 
-      // 자연스러운 물고기 움직임을 위한 애니메이션 함수
+      // 기존 애니메이션 효과를 그대로 사용하여 물고기 움직임 구현
       function animateFish(element) {
         const width = window.innerWidth;
         const height = window.innerHeight;
-        const fishWidth = 150; // 이미지 크기
-        const fishHeight = 150;
-        // Next.js 코드의 safeMargin 계산식을 참고 (여기서는 150px 기준)
+        const fishWidth = 150; // 이미지 크기 기준 (안내용)
         const safeMargin = (fishWidth - 70) / 2 + 90; // 약 130px
         const bottomMargin = 100;
         const upperLimit = height * 0.2;
 
-        // 초기 위치: 좌우 경계를 고려하여 safeMargin 내에서 배치
+        // 초기 위치를 무작위로 설정
         let startX = Math.random() * (width - 2 * safeMargin) + safeMargin;
         let startY = Math.random() * (height - bottomMargin - 50) + 50;
         gsap.set(element, { x: startX, y: startY, scaleX: -1 });
 
-        let direction = 1; // 1 또는 -1 (이미지 좌우 반전)
+        let direction = 1; // 1 또는 -1
 
         function moveFish() {
           const randomSpeed = Math.random() * 7 + 9; // 9 ~ 16초 사이의 이동 시간
@@ -105,7 +151,6 @@
             duration: randomSpeed,
             ease: 'power2.inOut',
             onUpdate: function () {
-              // 이동 중에도 계속 방향 업데이트
               const prevX = parseFloat(gsap.getProperty(element, 'x'));
               direction = newX > prevX ? -1 : 1;
               gsap.set(element, { scaleX: direction });

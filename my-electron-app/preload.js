@@ -1,12 +1,27 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
+// 로드 확인용 로그 추가
+console.log('[preload] Preload script loaded');
+
 contextBridge.exposeInMainWorld('electronAPI', {
-  minimize: () => ipcRenderer.send('minimize-window'),
-  maximize: () => ipcRenderer.send('maximize-window'),
-  close: () => ipcRenderer.send('close-window'),
-  toggleOverlay: (fishPath) => {
-    console.log('[preload] toggleOverlay called with fishPath:', fishPath);
-    ipcRenderer.send('toggle-overlay', fishPath);
+  minimize: () => {
+    console.log('[preload] minimize called');
+    ipcRenderer.send('minimize-window');
   },
-  showAlert: (message) => ipcRenderer.invoke('show-alert', message)
+  maximize: () => {
+    console.log('[preload] maximize called');
+    ipcRenderer.send('maximize-window');
+  },
+  close: () => {
+    console.log('[preload] close called');
+    ipcRenderer.send('close-window');
+  },
+  toggleOverlay: (fishData) => {
+    console.log('[preload] toggleOverlay called with fishData:', fishData);
+    ipcRenderer.send('toggle-overlay', fishData);
+  },
+  showAlert: (message) => {
+    console.log('[preload] showAlert called with message:', message);
+    return ipcRenderer.invoke('show-alert', message);
+  },
 });
