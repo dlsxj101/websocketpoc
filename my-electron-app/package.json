@@ -1,6 +1,6 @@
 {
   "name": "AQoO",
-  "version": "1.0.10",
+  "version": "1.0.0",
   "description": "",
   "main": "main.js",
   "scripts": {
@@ -24,6 +24,17 @@
     },
     "directories": {
       "output": "release"
-    }
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "dlsxj101",
+        "repo": "websocketpoc"
+      }
+    ]
+  },
+  "dependencies": {
+    "electron-log": "^5.3.0",
+    "electron-updater": "^6.3.9"
   }
 }
