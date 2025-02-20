@@ -3,6 +3,7 @@ const {
   app,
   BrowserWindow,
   ipcMain,
+  screen,
   session,
   Tray,
   Menu,
@@ -212,12 +213,27 @@ ipcMain.on('close-window', () => {
   if (mainWindow) mainWindow.close();
 });
 
+ipcMain.handle("get-displays", () => {
+  // 디스플레이 정보 가져오기
+  const displays = screen.getAllDisplays();
+  console.log("Detected displays:", displays);
+  return displays.map((display) => ({
+    id: display.id,
+    bounds: display.bounds,
+  }));
+});
+
 // 오버레이 창 토글 및 fishPath 전달
-ipcMain.on('toggle-overlay', (event, fishPath) => {
+ipcMain.on('toggle-overlay', (event, fishPath, displayId) => {
   console.log('[toggle-overlay] Called with fishPath:', fishPath);
+  console.log('[toggle-overlay] 선택된 displayId:', displayId);
+
+  const displays = screen.getAllDisplays();
+  // 선택한 displayId와 일치하는 디스플레이를 찾고, 없으면 기본(primary) 디스플레이 사용
+  const targetDisplay = displays.find(display => display.id === displayId) || screen.getPrimaryDisplay();
+  const { x, y, width, height } = targetDisplay.bounds;
 
   if (overlayWindow) {
-    console.log('[toggle-overlay] Overlay window exists. Closing overlay.');
     overlayWindow.close();
     overlayWindow = null;
     if (mainWindow) mainWindow.setAlwaysOnTop(true);
@@ -232,7 +248,10 @@ ipcMain.on('toggle-overlay', (event, fishPath) => {
     if (mainWindow) mainWindow.setAlwaysOnTop(false);
 
     overlayWindow = new BrowserWindow({
-      fullscreen: true,
+      x, // target display의 x 좌표
+      y, // target display의 y 좌표
+      width, // target display의 너비
+      height, // target display의 높이
       frame: false,
       transparent: true,
       alwaysOnTop: true, // 오버레이는 계속 위에 표시

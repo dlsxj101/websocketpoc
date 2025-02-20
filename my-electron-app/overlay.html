@@ -27,27 +27,36 @@
   </head>
   <body>
     <script>
-      window.addEventListener('DOMContentLoaded', () => {
+      window.addEventListener("DOMContentLoaded", () => {
         // overlay-preload.js를 통해 expose된 overlayAPI를 사용해 fishData를 받음
-        window.overlayAPI.onFishData((fishDataStr) => {
-          console.log('[overlay.html] onFishData - fishDataStr:', fishDataStr);
-          if (!fishDataStr) {
-            console.warn('[overlay.html] 전달받은 fishDataStr이 없습니다.');
+        window.overlayAPI.onFishData((dataStr) => {
+          // console.log('[overlay.html] onFishData - fishDataStr:', fishDataStr);
+          if (!dataStr) {
+            console.warn("[overlay.html] 전달받은 dataStr이 없습니다.");
             return;
           }
-          // 데이터 포맷: "https://.../블루탱.png:S:1,https://.../클라운피쉬.png:S:1,https://.../임페리얼엔젤피쉬.png:S:1,..."
-          const fishEntries = fishDataStr.split(',');
+          // 데이터 포맷: "fishDataPart|transparency"
+          // 예시: "https://example.com/fish1.png:S:2,https://example.com/fish2.png:M:1|50"
+          const parts = dataStr.split("|");
+          if (parts.length !== 2) {
+            console.warn("[overlay.html] 잘못된 데이터 포맷:", dataStr);
+            return;
+          }
+          const fishDataPart = parts[0];
+          const transparency = parseInt(parts[1], 10); // 0~100 사이의 값
+
+          const fishEntries = fishDataPart.split(",");
           fishEntries.forEach((entry) => {
-            const parts = entry.split(':');
-            console.log('parts.length:', parts.length);
+            const parts = entry.split(":");
+            // console.log('parts.length:', parts.length);
             if (parts.length !== 4) {
-              console.warn('[overlay.html] 잘못된 데이터 포맷:', entry);
+              console.warn("[overlay.html] 잘못된 데이터 포맷:", entry);
               return;
             }
             const [head, imgUrl, size, countStr] = parts;
             const count = parseInt(countStr, 10);
             for (let i = 0; i < count; i++) {
-              createFish(head + ':' + imgUrl, size);
+              createFish(head + ":" + imgUrl, size, transparency);
             }
           });
         });
@@ -56,15 +65,15 @@
       // 물고기 크기 설정 함수
       function getFishSize(size) {
         switch (size) {
-          case 'XS':
+          case "XS":
             return { width: 50, height: 50 };
-          case 'S':
+          case "S":
             return { width: 75, height: 75 };
-          case 'M':
+          case "M":
             return { width: 110, height: 110 };
-          case 'L':
+          case "L":
             return { width: 175, height: 175 };
-          case 'XL':
+          case "XL":
             return { width: 200, height: 200 };
           default:
             return { width: 110, height: 110 }; // 기본값 (M)
@@ -72,16 +81,19 @@
       }
 
       // 물고기 이미지 생성 및 DOM에 추가
-      function createFish(imgUrl, size) {
-        const fishImg = document.createElement('img');
-        fishImg.className = 'fish';
+      function createFish(imgUrl, size, transparency) {
+        const fishImg = document.createElement("img");
+        fishImg.className = "fish";
         fishImg.src = imgUrl;
-        fishImg.alt = 'fish image';
+        fishImg.alt = "fish image";
 
         // 크기 적용
         const fishSize = getFishSize(size);
-        fishImg.style.width = fishSize.width + 'px';
-        fishImg.style.height = fishSize.height + 'px';
+        fishImg.style.width = fishSize.width + "px";
+        fishImg.style.height = fishSize.height + "px";
+
+        // 전달받은 투명도(0~100)를 0~1로 변환하여 적용
+        fishImg.style.opacity = transparency / 100;
 
         document.body.appendChild(fishImg);
         fishImg.onload = () => {
@@ -109,7 +121,7 @@
           const randomSpeed = Math.random() * 7 + 9; // 9 ~ 16초 사이의 이동 시간
           const maxMoveX = width * (0.4 + Math.random() * 0.4);
           let moveDistanceX = maxMoveX * (Math.random() > 0.5 ? 1 : -1);
-          const currentY = parseFloat(gsap.getProperty(element, 'y'));
+          const currentY = parseFloat(gsap.getProperty(element, "y"));
           let moveDistanceY =
             height *
             (0.1 + Math.random() * 0.15) *
@@ -120,7 +132,7 @@
             moveDistanceY = height * (0.1 + Math.random() * 0.2);
           }
 
-          let currentX = parseFloat(gsap.getProperty(element, 'x'));
+          let currentX = parseFloat(gsap.getProperty(element, "x"));
           let newX = currentX + moveDistanceX;
           let newY = currentY + moveDistanceY;
 
@@ -149,9 +161,9 @@
             y: newY,
             scaleX: direction,
             duration: randomSpeed,
-            ease: 'power2.inOut',
+            ease: "power2.inOut",
             onUpdate: function () {
-              const prevX = parseFloat(gsap.getProperty(element, 'x'));
+              const prevX = parseFloat(gsap.getProperty(element, "x"));
               direction = newX > prevX ? -1 : 1;
               gsap.set(element, { scaleX: direction });
             },
