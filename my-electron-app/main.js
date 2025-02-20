@@ -11,6 +11,14 @@ const {
 } = require('electron');
 const path = require('path');
 
+// 추가: 업데이트 관련 모듈 로드
+const { autoUpdater } = require('electron-updater');
+const log = require('electron-log');
+
+// 로깅 설정
+autoUpdater.logger = log;
+autoUpdater.logger.transports.file.level = 'info';
+
 // 단일 인스턴스 락 설정
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
@@ -187,6 +195,9 @@ app
     );
     createMainWindow();
     createTray();
+
+    // 앱이 준비되면 업데이트 확인 및 알림 시작
+    autoUpdater.checkForUpdatesAndNotify();
   })
   .catch((err) => console.error(err));
 
@@ -239,9 +250,7 @@ ipcMain.on('toggle-overlay', (event, fishPath, displayId) => {
     if (mainWindow) mainWindow.setAlwaysOnTop(true);
   } else {
     if (!fishPath) {
-      console.warn(
-        '[toggle-overlay] No fishPath provided. Aborting overlay creation.'
-      );
+      console.warn('[toggle-overlay] No fishPath provided. Aborting overlay creation.');
       return;
     }
 
@@ -268,7 +277,7 @@ ipcMain.on('toggle-overlay', (event, fishPath, displayId) => {
     overlayWindow.loadFile(path.join(__dirname, 'overlay.html'));
 
     overlayWindow.webContents.on('did-finish-load', () => {
-      // 오버레이 창을 'screen-saver' 우선순위로 고정 (필요에 따라 다른 레벨 사용 가능)
+      // 오버레이 창을 'screen-saver' 우선순위로 고정
       overlayWindow.setAlwaysOnTop(true, 'screen-saver', 0);
       overlayWindow.webContents.send('fish-data', fishPath);
       if (mainWindow) mainWindow.focus();
@@ -298,4 +307,17 @@ ipcMain.handle('show-alert', async (event, message) => {
     buttons: ['확인'],
     defaultId: 0,
   });
+});
+
+// 업데이트 이벤트 핸들러
+autoUpdater.on('update-available', (info) => {
+  log.info('Update available:', info);
+});
+autoUpdater.on('update-downloaded', (info) => {
+  log.info('Update downloaded:', info);
+  // 업데이트 다운로드 완료 후 자동 재시작
+  autoUpdater.quitAndInstall();
+});
+autoUpdater.on('error', (err) => {
+  log.error('Error in auto-updater:', err);
 });
