@@ -29,6 +29,7 @@ let mainWindow;
 let overlayWindow = null;
 let tray = null;
 let isQuiting = false; // 실제 종료할 때만 true로 전환
+let updateWindow = null; // 업데이트 진행 모달 창
 
 // preload 파일 경로 확인용 로그
 const mainPreloadPath = path.join(__dirname, 'preload.js');
@@ -97,8 +98,8 @@ function createMainWindow() {
     },
   });
 
+  // 웹 프로젝트를 래핑하므로 URL 로드 (index.html 대신 원격 URL 사용)
   mainWindow.loadURL('https://i12e203.p.ssafy.io');
-  // mainWindow.loadFile(path.join(__dirname, 'index.html'));
 
   mainWindow.on('closed', () => {
     mainWindow = null;
@@ -179,6 +180,73 @@ function createTray() {
   });
 }
 
+// 업데이트 모달 창 생성 함수
+function createUpdateModal() {
+  if (updateWindow) return; // 이미 존재하면 재생성하지 않음
+
+  updateWindow = new BrowserWindow({
+    parent: mainWindow,
+    modal: true,
+    show: false,
+    frame: false,
+    width: 400,
+    height: 200,
+    resizable: false,
+    movable: false,
+    alwaysOnTop: true,
+    webPreferences: {
+      nodeIntegration: true, // 간단한 IPC 및 DOM 조작을 위해 사용 (보안에 주의)
+      contextIsolation: false,
+    },
+  });
+
+  // data URL을 사용하여 업데이트 모달 HTML 정의
+  updateWindow.loadURL(
+    'data:text/html;charset=utf-8,' +
+      encodeURIComponent(`
+    <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>업데이트 진행중</title>
+        <style>
+          body {
+            font-family: sans-serif;
+            text-align: center;
+            padding: 20px;
+          }
+          #progress {
+            width: 100%;
+          }
+        </style>
+      </head>
+      <body>
+        <h2>업데이트 진행 중...</h2>
+        <p id="message">업데이트를 확인 중입니다.</p>
+        <progress id="progress" value="0" max="100"></progress>
+        <script>
+          const { ipcRenderer } = require('electron');
+          ipcRenderer.on('update-modal-message', (event, data) => {
+            document.getElementById('message').innerText = data.message;
+            if (data.progress !== undefined) {
+              document.getElementById('progress').value = data.progress;
+            }
+          });
+        </script>
+      </body>
+    </html>
+  `)
+  );
+
+  updateWindow.once('ready-to-show', () => {
+    updateWindow.show();
+  });
+
+  // 모달 창이 닫히면 updateWindow 변수 초기화
+  updateWindow.on('closed', () => {
+    updateWindow = null;
+  });
+}
+
 app
   .whenReady()
   .then(() => {
@@ -224,7 +292,7 @@ ipcMain.on('close-window', () => {
   if (mainWindow) mainWindow.close();
 });
 
-ipcMain.handle("get-displays", () => {
+ipcMain.handle('get-displays', () => {
   // 디스플레이 정보 가져오기
   const displays = screen.getAllDisplays();
   console.log("Detected displays:", displays);
@@ -241,7 +309,8 @@ ipcMain.on('toggle-overlay', (event, fishPath, displayId) => {
 
   const displays = screen.getAllDisplays();
   // 선택한 displayId와 일치하는 디스플레이를 찾고, 없으면 기본(primary) 디스플레이 사용
-  const targetDisplay = displays.find(display => display.id === displayId) || screen.getPrimaryDisplay();
+  const targetDisplay =
+    displays.find((display) => display.id === displayId) || screen.getPrimaryDisplay();
   const { x, y, width, height } = targetDisplay.bounds;
 
   if (overlayWindow) {
@@ -309,15 +378,49 @@ ipcMain.handle('show-alert', async (event, message) => {
   });
 });
 
-// 업데이트 이벤트 핸들러
+// ======================
+// 업데이트 이벤트 핸들러 (IPC 메시지 전송 포함)
+// ======================
 autoUpdater.on('update-available', (info) => {
   log.info('Update available:', info);
+  createUpdateModal();
+  if (updateWindow) {
+    updateWindow.webContents.send('update-modal-message', {
+      message: '새로운 업데이트가 감지되었습니다. 다운로드를 시작합니다.',
+    });
+  }
 });
+
+autoUpdater.on('download-progress', (progressObj) => {
+  log.info('Download progress:', progressObj);
+  createUpdateModal();
+  if (updateWindow) {
+    updateWindow.webContents.send('update-modal-message', {
+      message: `업데이트 다운로드 중... ${Math.round(progressObj.percent)}%`,
+      progress: Math.round(progressObj.percent),
+    });
+  }
+});
+
 autoUpdater.on('update-downloaded', (info) => {
   log.info('Update downloaded:', info);
-  // 업데이트 다운로드 완료 후 자동 재시작
-  autoUpdater.quitAndInstall();
+  if (updateWindow) {
+    updateWindow.webContents.send('update-modal-message', {
+      message: '업데이트 다운로드가 완료되었습니다. 앱을 재시작합니다.',
+    });
+  }
+  // 잠시 후 자동 재시작 (예: 3초 후)
+  setTimeout(() => {
+    autoUpdater.quitAndInstall();
+  }, 3000);
 });
+
 autoUpdater.on('error', (err) => {
   log.error('Error in auto-updater:', err);
+  createUpdateModal();
+  if (updateWindow) {
+    updateWindow.webContents.send('update-modal-message', {
+      message: `업데이트 중 오류 발생: ${err.message}`,
+    });
+  }
 });
